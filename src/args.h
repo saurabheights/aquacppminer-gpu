@@ -6,6 +6,7 @@ bool parseArgs(const char* prefix, int argc, char** argv);
 void printUsage();
 std::pair<bool, uint32_t> parseRefreshRate(const std::string& refreshRateStr);
 
+const std::string OPT_DEVICENUM = "-d";
 const std::string OPT_USAGE = "-h";
 const std::string OPT_NTHREADS = "-t";
 const std::string OPT_GETWORK_URL = "-F";

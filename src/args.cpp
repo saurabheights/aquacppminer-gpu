@@ -57,6 +57,18 @@ bool parseArgs(const char* prefix, int argc, char** argv)
 	if (ip.cmdOptionExists(OPT_SOLO)) {
 		cfg.soloMine = true;
 	}
+    
+	if (ip.cmdOptionExists(OPT_DEVICENUM)) {
+		const auto& nDeviceStr = ip.getCmdOption(OPT_NTHREADS);
+		int n = sscanf(nDeviceStr.c_str(), "%u", &cfg.nDevice);
+		if (n<1) {
+			logLine(prefix, 
+				"Warning: invalid value for GPU device (%d), reverting to default", 
+				cfg.nDevice);
+			cfg.nDevice = 0;
+
+        }
+	}
 
 	if (ip.cmdOptionExists(OPT_NTHREADS)) {
 		const auto& nThreadsStr = ip.getCmdOption(OPT_NTHREADS);

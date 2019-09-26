@@ -6,6 +6,7 @@
 struct MiningConfig {
 	bool soloMine;
 	uint32_t nThreads;
+	uint32_t nDevice; // gpu device to use
 	uint32_t refreshRateMs;
 
 	std::string getWorkUrl;

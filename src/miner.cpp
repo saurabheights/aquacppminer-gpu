@@ -550,7 +550,7 @@ void print_device_info(unsigned i, cl_device_id d)
 
 
 unsigned scan_platform(cl_platform_id plat, cl_uint *nr_devs_total,
-	cl_platform_id *plat_id, cl_device_id *dev_id)
+	cl_platform_id *plat_id, cl_device_id *dev_id, cl_uint *ndevice)
 {
 	cl_device_type	typ = CL_DEVICE_TYPE_ALL;
 	cl_uint		nr_devs = 0;
@@ -572,7 +572,7 @@ unsigned scan_platform(cl_platform_id plat, cl_uint *nr_devs_total,
 	while (i < nr_devs)
 	{
 
-		if (*nr_devs_total == 0)
+		if (*nr_devs_total == *ndevice)
 		{
 			//gpu_to_use++;
 			print_device_info(*nr_devs_total, devices[i]);
@@ -588,7 +588,7 @@ unsigned scan_platform(cl_platform_id plat, cl_uint *nr_devs_total,
 	return found;
 }
 
-void scan_platforms(cl_platform_id *plat_id, cl_device_id *dev_id)
+void scan_platforms(cl_platform_id *plat_id, cl_device_id *dev_id, cl_uint *ndevice)
 {
 	cl_uint		nr_platforms;
 	cl_platform_id	*platforms;
@@ -610,7 +610,7 @@ void scan_platforms(cl_platform_id *plat_id, cl_device_id *dev_id)
 	i = nr_devs_total = 0;
 	while (i < nr_platforms)
 	{
-		if (scan_platform(platforms[i], &nr_devs_total, plat_id, dev_id))
+		if (scan_platform(platforms[i], &nr_devs_total, plat_id, dev_id, ndevice))
 			break;
 		i++;
 	}
@@ -646,7 +646,8 @@ void minerThreadFn(int minerID)
 	__clState *clState = &cll;
 
 
-	scan_platforms(&plat_id, &dev_id);
+	cl_uint devicenum  = miningConfig().nDevice;
+	scan_platforms(&plat_id, &dev_id, &devicenum);
 
 	clState->context = clCreateContext(NULL, 1, &dev_id,
 		NULL, NULL, &status);
