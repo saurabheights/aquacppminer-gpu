@@ -1,3 +1,5 @@
+# GPU variety of [aquacppminer](https://github.com/aquachain/aquacppminer)
+
 # Aquacppminer
 [Aquachain](https://aquachain.github.io/) C++ optimized miner, originally created by cryptogone.
 
