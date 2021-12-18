@@ -7,5 +7,5 @@ void startUpdateThread();
 void stopUpdateThread();
 
 WorkParams currentWorkParams();
-bool requestPoolParams(const MiningConfig& config, WorkParams &workParams, bool verbose);
+bool requestPoolParams(const MiningConfig& config, WorkParams& workParams, bool verbose);
 uint32_t getPoolGetWorkCount();

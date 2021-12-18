@@ -1,20 +1,21 @@
 #pragma once
 
-#include <string>
 #include <stdint.h>
 
+#include <string>
+
 struct MiningConfig {
-	bool soloMine;
-	uint32_t nThreads;
-	uint32_t nDevice; // gpu device to use
-	uint32_t refreshRateMs;
+    bool soloMine;
+    uint32_t nThreads;
+    uint32_t nDevice;  // gpu device to use
+    uint32_t refreshRateMs;
 
-	std::string getWorkUrl;
-	std::string submitWorkUrl;
-	std::string submitWorkUrl2;
-	std::string fullNodeUrl;
+    std::string getWorkUrl;
+    std::string submitWorkUrl;
+    std::string submitWorkUrl2;
+    std::string fullNodeUrl;
 
-	std::string defaultSubmitWorkUrl;
+    std::string defaultSubmitWorkUrl;
 };
 
 void initMiningConfig();
