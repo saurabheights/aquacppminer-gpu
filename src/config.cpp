@@ -129,14 +129,10 @@ bool createConfigFile(std::string& log) {
     if (newCfg.soloMine) {
         newCfg.fullNodeUrl = newCfg.getWorkUrl;
     } else {
-        bool fullNodeUrlOk = false;
-        while (!fullNodeUrlOk) {
-            std::cin.clear();
-            std::cout << "Enter node url, ex: http://127.0.0.1:8543 (optional, enter to skip):"
-                      << std::endl;
-            newCfg.fullNodeUrl = readInput();
-            fullNodeUrlOk = true;
-        }
+        std::cin.clear();
+        std::cout << "Enter node url, ex: http://127.0.0.1:8543 (optional, enter to skip):"
+                  << std::endl;
+        newCfg.fullNodeUrl = readInput();
     }
 
     bool nThreadsOk = false;
