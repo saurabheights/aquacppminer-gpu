@@ -49,7 +49,8 @@ bool loadConfigFile(std::string& log) {
     MiningConfig newCfg = miningConfig();
 
     std::ifstream fs(configFilePath());
-    const size_t BUFLEN = 256;
+    // ToDo dont use char arrays, use string.
+    const size_t BUFLEN = 1024;  // Pool address can be longer, if we are using merged pools.
     char params[N_PARAMS][BUFLEN];
     for (int i = 0; i < N_PARAMS; i++) {
         if (!fs.getline(params[i], BUFLEN)) {
