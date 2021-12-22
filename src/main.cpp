@@ -37,17 +37,6 @@
 #pragma comment(lib, "Normaliz")
 #endif
 
-#if defined(__AVX2__)
-#pragma message("--- AVX2")
-const std::string ARGON_ARCH = "AVX2";
-#elif defined(__AVX__)
-#pragma message("--- AVX")
-const std::string ARGON_ARCH = "AVX";
-#else
-#pragma message("--- no AVX")
-const std::string ARGON_ARCH = "";
-#endif
-
 #define ARGON_VALIDITY_CHECK (1)
 
 using std::chrono::high_resolution_clock;
@@ -73,47 +62,6 @@ void initConfigurationFile() {
     }
 }
 
-std::string getBlakeSSE() {
-#if defined(HAVE_SSE41)
-    return "SSE4.1";
-#elif defined(HAVE_SSSE3)
-    return "SSE3";
-#elif defined(HAVE_SSE2)
-    return "SSE2";
-#else
-    return "";
-#endif
-}
-
-std::string getBlakeAVX() {
-#if defined(HAVE_AVX)
-    return "AVX";
-#else
-    return "";
-#endif
-}
-
-std::string getArgon2idAVX() {
-    return ARGON_ARCH;
-}
-
-void printOptimizationsInfo() {
-    auto blakeAVX = std::string(" ") + getBlakeAVX();
-    auto blakeSSE = std::string(" ") + getBlakeSSE();
-    if (blakeSSE.size() || blakeAVX.size()) {
-        printf("-- Blake2b using%s%s\n", blakeAVX.c_str(), blakeSSE.c_str());
-    } else {
-        printf("-- Warning: Blake2b not using any CPU Instructions set (SSE, AVX, ...)\n");
-    }
-
-    auto argonAVX = getArgon2idAVX();
-    if (argonAVX.size()) {
-        printf("-- Argon2id using %s\n", argonAVX.c_str());
-    } else {
-        printf("-- Standard Argon2id (no AVX or AVX2)\n");
-    }
-}
-
 int main(int argc, char** argv) {
     s_configDir = getPwd(argv);
 
@@ -126,8 +74,6 @@ int main(int argc, char** argv) {
     printf("-- AquaCppMiner %s %s (use -h for help, ctrl+c to quit)\n",
            VERSION.c_str(),
            ARCH);
-
-    printOptimizationsInfo();
 
     fflush(stdout);
 
