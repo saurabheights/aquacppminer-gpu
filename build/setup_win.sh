@@ -20,10 +20,6 @@ LOG_SECTION "CURL"
 bash build/scripts_win/setup_curl.sh
 
 cd $pwd
-LOG_SECTION "RAPIDJSON"
-bash build/scripts_win/setup_rapidjson.sh
-
-cd $pwd
 LOG_SECTION "ARGON"
 bash build/scripts_win/setup_argon.sh
 
