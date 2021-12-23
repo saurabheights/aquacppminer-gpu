@@ -27,6 +27,7 @@
 #include <thread>
 
 #include "../blake2/sse/blake2-config.h"
+#include "hardware_utils.h"
 #include "hex_encode_utils.h"
 
 #ifdef _MSC_VER
@@ -63,6 +64,13 @@ void initConfigurationFile() {
 }
 
 int main(int argc, char** argv) {
+    // Check if any GPU is available.
+    int numOfGpus = checkGpuDevices();
+    if (numOfGpus == 0) {
+        std::cerr << "No devices detected. Miner will exit." << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
     s_configDir = getPwd(argv);
 
 #ifdef _MSC_VER
@@ -158,22 +166,11 @@ int main(int argc, char** argv) {
     // create & launch update thread
     startUpdateThread();
 
-    // auto detect number of threads if not specified
-    if (miningConfig().nThreads <= 0) {
-        MiningConfig newCfg = miningConfig();
-#ifdef _MSC_VER
-        newCfg.nThreads = nLogicalCores();
-#else
-        newCfg.nThreads = std::thread::hardware_concurrency();
-#endif
-        setMiningConfig(newCfg);
-    }
-
     auto tMiningStart = high_resolution_clock::now();
     auto tLast = tMiningStart;
     uint32_t nHashesLast = 0;
     if (s_run) {
-        auto nThreads = miningConfig().nThreads;
+        auto gpuMiners = miningConfig().gpuIds.size();
         logLine(COORDINATOR_LOG_PREFIX, "--- Start %s mining ---",
                 miningConfig().soloMine ? "solo" : "pool");
         logLine(COORDINATOR_LOG_PREFIX,
@@ -184,11 +181,11 @@ int main(int argc, char** argv) {
             logLine(COORDINATOR_LOG_PREFIX, "node url : %s",
                     miningConfig().fullNodeUrl.c_str());
         }
-        logLine(COORDINATOR_LOG_PREFIX, "nthreads : %d",
-                nThreads);
+        logLine(COORDINATOR_LOG_PREFIX, "gpuMiners : %d",
+                gpuMiners);
         logLine(COORDINATOR_LOG_PREFIX, "refresh  : %2.1fs",
                 miningConfig().refreshRateMs / 1000.0f);
-        startMinerThreads(nThreads);
+        startMinerThreads(gpuMiners);
     }
 
     // run forever until CTRL+C hit
@@ -214,9 +211,9 @@ int main(int argc, char** argv) {
 
             double khs = hashesPerSecondSinceLast / 1000.0;
             std::string formatStr;
-            formatStr = (khs >= 1.0) ? "%d threads | %6.2f kH/s | %s=%5lu | Rejected=%5lu (%4.1f%%)" : "%d threads | %5.3f kH/s | %s=%5lu | Rejected=%5lu (%4.1f%%)";
+            formatStr = (khs >= 1.0) ? "%d devices | %6.2f kH/s | %s=%5lu | Rejected=%5lu (%4.1f%%)" : "%d threads | %5.3f kH/s | %s=%5lu | Rejected=%5lu (%4.1f%%)";
             logLine(COORDINATOR_LOG_PREFIX, formatStr.c_str(),
-                    miningConfig().nThreads,
+                    miningConfig().gpuIds.size(),
                     khs,
                     miningConfig().soloMine ? "Blocks" : "Shares",
                     nSharesAccepted,
@@ -226,6 +223,11 @@ int main(int argc, char** argv) {
         const uint32_t REPORT_INTERVAL_MS = 5 * 1000;
         std::this_thread::sleep_for(std::chrono::milliseconds(REPORT_INTERVAL_MS));
     };
+
+    // Cleanup opencl devices
+    for (auto&& device : miningConfig().gpuIds) {
+        free(device);
+    }
 
     // kill threads
     logLine(COORDINATOR_LOG_PREFIX, "Stopping Threads");

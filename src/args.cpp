@@ -2,11 +2,15 @@
 
 #include <assert.h>
 
+#include <iostream>
+#include <set>
+
 #include "http.h"
 #include "inputParser.h"
 #include "log.h"
 #include "miner.h"
 #include "miningConfig.h"
+#include "string_utils.h"
 
 void printUsage() {
     printf("\n%s\n", s_usageMsg.c_str());
@@ -55,26 +59,32 @@ bool parseArgs(const char* prefix, int argc, char** argv) {
         cfg.soloMine = true;
     }
 
-    if (ip.cmdOptionExists(OPT_DEVICENUM)) {
-        const auto& nDeviceStr = ip.getCmdOption(OPT_NTHREADS);
-        int n = sscanf(nDeviceStr.c_str(), "%u", &cfg.nDevice);
-        if (n < 1) {
-            logLine(prefix,
-                    "Warning: invalid value for GPU device (%d), reverting to default",
-                    cfg.nDevice);
-            cfg.nDevice = 0;
+    if (ip.cmdOptionExists(OPT_GPU_IDS)) {
+        const auto& gpuIdsStr = ip.getCmdOption(OPT_GPU_IDS);
+        std::vector<std::string> gpusToUse = split(gpuIdsStr, ',');
+        std::vector<int> gpusToUseIndices;
+        std::transform(gpusToUse.begin(), gpusToUse.end(), std::back_inserter(gpusToUseIndices),
+                       [](const std::string& str) { return std::stoi(str); });
+        // Check if gpusToUseIndices is a subset of gpuIds and all gpu ids are unique
+        std::set<int> gpusToUseIndicesSet;
+        std::copy(gpusToUseIndices.begin(), gpusToUseIndices.end(), std::inserter(gpusToUseIndicesSet, gpusToUseIndicesSet.end()));
+        for (auto&& gpuId : gpusToUseIndicesSet) {
+            if (gpuId < 1 || gpuId > cfg.gpuIds.size()) {
+                std::cout << "Invalid gpu id in config. GPU id must be between 1 and " << cfg.gpuIds.size() << " (inclusive): " << std::endl;
+                return false;
+            }
         }
-    }
 
-    if (ip.cmdOptionExists(OPT_NTHREADS)) {
-        const auto& nThreadsStr = ip.getCmdOption(OPT_NTHREADS);
-        int n = sscanf(nThreadsStr.c_str(), "%u", &cfg.nThreads);
-        if (n < 1) {
-            logLine(prefix,
-                    "Warning: invalid value for number of threads (%d), reverting to default",
-                    cfg.nThreads);
-            cfg.nThreads = 0;
+        // Move user input values to new vector and copy that vector to cfg.
+        std ::vector<cl_device_id*> gpuIds;
+        for (size_t i = 0; i < cfg.gpuIds.size(); i++) {
+            // User input was 1-indexed
+            if (gpusToUseIndicesSet.find(i + 1) != gpusToUseIndicesSet.end())
+                gpuIds.push_back(cfg.gpuIds.at(i));
+            else
+                free(cfg.gpuIds.at(i));
         }
+        cfg.gpuIds = gpuIds;
     }
 
     if (ip.cmdOptionExists(OPT_REFRESH_RATE)) {

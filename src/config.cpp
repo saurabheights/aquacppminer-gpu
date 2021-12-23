@@ -8,11 +8,13 @@
 #include "windows/procinfo_windows.h"
 #endif
 
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
-#include <thread>
+#include <vector>
 
 extern std::string s_configDir;
 
@@ -32,7 +34,7 @@ std::string configFilePath() {
 enum {
     MODE = 0,
     GET_WORK_URL,
-    NTHREADS,
+    GPUIDS,
     REFRESH_RATE_MS,
     FULLNODE_URL,
     N_PARAMS
@@ -46,6 +48,7 @@ bool configFileExists() {
 }
 
 bool loadConfigFile(std::string& log) {
+    std::cout << "Reading configuration file" << std::endl;
     MiningConfig newCfg = miningConfig();
 
     std::ifstream fs(configFilePath());
@@ -75,9 +78,35 @@ bool loadConfigFile(std::string& log) {
     newCfg.getWorkUrl = params[GET_WORK_URL];
     newCfg.fullNodeUrl = params[FULLNODE_URL];
 
-    if (sscanf(params[NTHREADS], "%d", &newCfg.nThreads) != 1) {
-        log = "cannot find thread count";
-        return false;
+        // Convert string to int.
+    std::string input(params[GPUIDS]);
+    std::vector<int> gpusToUseIndices;
+    try {
+        std::vector<std::string> gpusToUse = split(input, ',');
+        std::transform(gpusToUse.begin(), gpusToUse.end(), std::back_inserter(gpusToUseIndices),
+                       [](const std::string& str) { return std::stoi(str); });
+        // Check if gpusToUseIndices is a subset of gpuIds and all gpu ids are unique
+        std::set<int> gpusToUseIndicesSet;
+        std::copy(gpusToUseIndices.begin(), gpusToUseIndices.end(), std::inserter(gpusToUseIndicesSet, gpusToUseIndicesSet.end()));
+        for (auto&& gpuId : gpusToUseIndicesSet) {
+            if (gpuId < 1 || gpuId > newCfg.gpuIds.size()) {
+                std::cout << "Invalid gpu id in config. GPU id must be between 1 and " << newCfg.gpuIds.size() << " (inclusive): " << std::endl;
+                break;
+            }
+        }
+
+        // Move user input values to new vector and copy that vector to cfg.
+        std ::vector<cl_device_id*> gpuIds;
+        for (size_t i = 0; i < newCfg.gpuIds.size(); i++) {
+            // User input was 1-indexed
+            if (gpusToUseIndicesSet.find(i + 1) != gpusToUseIndicesSet.end())
+                gpuIds.push_back(newCfg.gpuIds.at(i));
+            else
+                free(newCfg.gpuIds.at(i));
+        }
+        newCfg.gpuIds = gpuIds;
+    } catch (std::exception& err) {
+        std::cout << "Configuration is invalid, has non-integer GPU ids. Will ignore gpu indices from config. " << err.what() << std::endl;
     }
 
     if (sscanf(params[REFRESH_RATE_MS], "%u", &newCfg.refreshRateMs) != 1) {
@@ -130,30 +159,72 @@ bool createConfigFile(std::string& log) {
         newCfg.fullNodeUrl = newCfg.getWorkUrl;
     } else {
         std::cin.clear();
-        std::cout << "Enter node url, ex: http://127.0.0.1:8543 (optional, enter to skip):"
-                  << std::endl;
+        std::cout << "Enter node url, ex: http://127.0.0.1:8543 (optional, enter to skip): ";
         newCfg.fullNodeUrl = readInput();
     }
 
-    bool nThreadsOk = false;
-    while (!nThreadsOk) {
+    bool allGpuIdsValid = false;
+    std::set<int> gpusToUseIndicesSet;
+    while (!allGpuIdsValid) {
+        gpusToUseIndicesSet.clear();
         std::cin.clear();
-        std::cout << "Enter number of threads to use, 0/empty for auto (" << std::thread::hardware_concurrency() << " cores detected): ";
-        std::string nThreadsStr;
-        std::getline(std::cin, nThreadsStr);
-        if (nThreadsStr.size() == 0) {
-            nThreadsOk = true;
-            newCfg.nThreads = miningConfig().nThreads;
-        } else {
-            int nThreads = 0;
-            nThreadsOk = sscanf(nThreadsStr.c_str(), "%d", &nThreads) == 1;
-            if (nThreads >= 0) {
-                newCfg.nThreads = (uint32_t)nThreads;
-            } else {
-                nThreadsOk = false;
-            }
+
+        std::cout << "Gpu devices available: " << std::endl;
+        for (size_t i = 0; i < newCfg.gpuIds.size(); i++) {
+            size_t valueSize;
+            clGetDeviceInfo(*(newCfg.gpuIds.at(i)), CL_DEVICE_NAME, 0, NULL, &valueSize);
+            char* value = (char*)malloc(valueSize);
+            clGetDeviceInfo(*(newCfg.gpuIds.at(i)), CL_DEVICE_NAME, valueSize, value, NULL);
+            printf("Select %ld for Device: %s\n", i + 1, value);
+            free(value);
         }
-        if (!nThreadsOk) {
+
+        std::cout << "Enter gpu_ids to use, ex. 1,2,... (optional, enter to use all gpus):";
+        std::string input;
+        std::getline(std::cin, input);
+        if (input.size() == 0) {
+            for (size_t i = 0; i < newCfg.gpuIds.size(); i++) {
+                gpusToUseIndicesSet.insert(i + 1);  // keep any value facing user as 1-indexed.
+            }
+
+            allGpuIdsValid = true;
+        } else {
+            // Convert string to int.
+            std::vector<int> gpusToUseIndices;
+            try {
+                std::vector<std::string> gpusToUse = split(input, ',');
+                std::transform(gpusToUse.begin(), gpusToUse.end(), std::back_inserter(gpusToUseIndices),
+                               [](const std::string& str) { return std::stoi(str); });
+            } catch (std::exception& err) {
+                std::cout << "Enter comma separate integers only: " << err.what() << std::endl;
+                continue;
+            }
+
+            // Check if gpusToUseIndices is a subset of gpuIds and all gpu ids are unique
+            allGpuIdsValid = true;
+            std::copy(gpusToUseIndices.begin(), gpusToUseIndices.end(), std::inserter(gpusToUseIndicesSet, gpusToUseIndicesSet.end()));
+            for (auto&& gpuId : gpusToUseIndicesSet) {
+                if (gpuId < 1 || gpuId > newCfg.gpuIds.size()) {
+                    std::cout << "Invalid gpu id. GPU id must be between 1 and " << newCfg.gpuIds.size() << " (inclusive): " << std::endl;
+                    allGpuIdsValid = false;
+                    break;
+                }
+            }
+            if (!allGpuIdsValid)
+                continue;
+
+            // Move user input values to new vector and copy that vector to cfg.
+            std ::vector<cl_device_id*> gpuIds;
+            for (size_t i = 0; i < newCfg.gpuIds.size(); i++) {
+                // User input was 1-indexed
+                if (gpusToUseIndicesSet.find(i + 1) != gpusToUseIndicesSet.end())
+                    gpuIds.push_back(newCfg.gpuIds.at(i));
+                else
+                    free(newCfg.gpuIds.at(i));
+            }
+            newCfg.gpuIds = gpuIds;
+        }
+        if (!allGpuIdsValid) {
             std::cout << "invalid number of threads" << std::endl;
             return false;
         }
@@ -162,7 +233,7 @@ bool createConfigFile(std::string& log) {
     bool refreshRateOk = false;
     while (!refreshRateOk) {
         std::cin.clear();
-        std::cout << "Enter refresh rate, ex: 3s, 2.5m (recommended value is 3s): " << std::endl;
+        std::cout << "Enter refresh rate, ex: 3s, 2.5m (recommended value is 3s): ";
         std::string refreshRateStr;
         std::getline(std::cin, refreshRateStr);
         auto res = parseRefreshRate(refreshRateStr);
@@ -182,7 +253,11 @@ bool createConfigFile(std::string& log) {
 
     fs << (newCfg.soloMine ? "solo" : "pool") << std::endl;
     fs << newCfg.getWorkUrl << std::endl;
-    fs << newCfg.nThreads << std::endl;
+    for (auto&& gpuId : gpusToUseIndicesSet) {
+        fs << gpuId << ",";
+    }
+
+    fs << std::endl;
     fs << newCfg.refreshRateMs << std::endl;
     fs << newCfg.fullNodeUrl << std::endl;
 

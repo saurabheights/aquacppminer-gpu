@@ -1,20 +1,21 @@
 #pragma once
 
+#include <CL/cl.h>
 #include <stdint.h>
 
 #include <string>
+#include <vector>
 
 struct MiningConfig {
     bool soloMine;
-    uint32_t nThreads;
-    uint32_t nDevice;  // gpu device to use
+    // List of gpu devices to use.
+    std::vector<cl_device_id*> gpuIds;
     uint32_t refreshRateMs;
 
     std::string getWorkUrl;
     std::string submitWorkUrl;
     std::string submitWorkUrl2;
     std::string fullNodeUrl;
-
     std::string defaultSubmitWorkUrl;
 };
 

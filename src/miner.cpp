@@ -460,14 +460,6 @@ uint64_t makeAquaNonce() {
 }
 #include <fcntl.h>
 
-//#include <io.h>
-// typedef SSIZE_T ssize_t;
-//#define open _open
-//#define read _read
-//#define write _write
-//#define close _close
-//#define snprintf _snprintf
-
 #define O_BINARY 0x8000
 
 void get_program_build_log(cl_program program, cl_device_id device) {
@@ -558,22 +550,22 @@ unsigned scan_platform(cl_platform_id plat, cl_uint *nr_devs_total,
 void scan_platforms(cl_platform_id *plat_id, cl_device_id *dev_id, cl_uint *ndevice) {
     cl_uint nr_platforms;
     cl_platform_id *platforms;
-    cl_uint i, nr_devs_total;
     cl_int status;
     status = clGetPlatformIDs(0, NULL, &nr_platforms);
     if (status != CL_SUCCESS)
         printf("Cannot get OpenCL platforms (%d)\n", status);
-    if (!nr_platforms)
-        fprintf(stderr, "Found %d OpenCL platform(s)\n", nr_platforms);
-    if (!nr_platforms)
+    if (!nr_platforms) {
+        fprintf(stderr, "Found %d OpenCL platform(s), exiting.\n", nr_platforms);
         exit(1);
+    }
     platforms = (cl_platform_id *)malloc(nr_platforms * sizeof(*platforms));
     if (!platforms)
         printf("malloc: %s\n", strerror(errno));
     status = clGetPlatformIDs(nr_platforms, platforms, NULL);
     if (status != CL_SUCCESS)
         printf("clGetPlatformIDs (%d)\n", status);
-    i = nr_devs_total = 0;
+
+    cl_uint i = 0, nr_devs_total = 0;
     while (i < nr_platforms) {
         if (scan_platform(platforms[i], &nr_devs_total, plat_id, dev_id, ndevice))
             break;
@@ -593,26 +585,22 @@ void check_clEnqueueReadBuffer(cl_command_queue queue, cl_mem buffer, cl_bool bl
 
 size_t source_len;
 
-void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
-    cl_platform_id plat_id = 0;
-    cl_device_id dev_id = 0;
+void minerThreadFn(int minerID) {
+    // Use one of available devices from configuration
+    cl_device_id dev_id = *(miningConfig().gpuIds.at(minerID));
     cl_int status;
     __clState cll;
-    __clState *clState = &cll;
+    cll.context = clCreateContext(NULL, 1, &dev_id,
+                                  NULL, NULL, &status);
 
-    cl_uint devicenum = miningConfig().nDevice;
-    scan_platforms(&plat_id, &dev_id, &devicenum);
-
-    clState->context = clCreateContext(NULL, 1, &dev_id,
-                                       NULL, NULL, &status);
-
-    if (status != CL_SUCCESS || !clState->context)
+    if (status != CL_SUCCESS || !cll.context)
         printf("clCreateContext (%d)\n", status);
+
     /* Creating command queue associate with the context.*/
-    clState->commandQueue = clCreateCommandQueue(clState->context, dev_id,
-                                                 0, &status);
-    if (status != CL_SUCCESS || !clState->commandQueue)
+    cll.commandQueue = clCreateCommandQueue(cll.context, dev_id, 0, &status);
+    if (status != CL_SUCCESS || !cll.commandQueue)
         printf("clCreateCommandQueue (%d)\n", status);
+
 #if _WIN32
     const *char source = null;
     load_file("input.cl", &source, &source_len, 0);
@@ -622,41 +610,39 @@ void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
     source_len = strlen(ocl_code);
 #endif
 
-    clState->program = clCreateProgramWithSource(clState->context, 1, (const char **)&source,
-                                                 &source_len, &status);
-    if (status != CL_SUCCESS || !clState->program)
+    /* Create and build program. */
+    cll.program = clCreateProgramWithSource(cll.context, 1, (const char **)&source,
+                                            &source_len, &status);
+    if (status != CL_SUCCESS || !cll.program)
         printf("clCreateProgramWithSource (%d)\n", status);
-    /* Build program. */
-
-    status = clBuildProgram(clState->program, 1, &dev_id,
+    status = clBuildProgram(cll.program, 1, &dev_id,
                             "",  // compile options
                             NULL, NULL);
     if (status != CL_SUCCESS) {
         printf("OpenCL build failed (%d). Build log follows:\n", status);
-        get_program_build_log(clState->program, dev_id);
+        get_program_build_log(cll.program, dev_id);
         fflush(stdout);
         exit(1);
     }
 
-    // Create kernel objects
-
-    clState->kernel[0] = clCreateKernel(clState->program, "search", &status);
-    if (status != CL_SUCCESS || !clState->kernel[0])
-        printf("clCreateKernel1 (%d)\n", status);
-    clState->kernel[1] = clCreateKernel(clState->program, "search1", &status);
-    if (status != CL_SUCCESS || !clState->kernel[1])
-        printf("clCreateKernel1 (%d)\n", status);
-    clState->kernel[2] = clCreateKernel(clState->program, "search2", &status);
-    if (status != CL_SUCCESS || !clState->kernel[2])
-        printf("clCreateKernel1 (%d)\n", status);
+    // Create kernel objects ToDo Iterate over kernel arrays
+    cll.kernel[0] = clCreateKernel(cll.program, "search", &status);
+    if (status != CL_SUCCESS || !cll.kernel[0])
+        printf("clCreateKernel-0 (%d)\n", status);
+    cll.kernel[1] = clCreateKernel(cll.program, "search1", &status);
+    if (status != CL_SUCCESS || !cll.kernel[1])
+        printf("clCreateKernel-1 (%d)\n", status);
+    cll.kernel[2] = clCreateKernel(cll.program, "search2", &status);
+    if (status != CL_SUCCESS || !cll.kernel[2])
+        printf("clCreateKernel-2 (%d)\n", status);
 
 #define AR2D_MEM_PER_BATCH 8192
     size_t throughput = 8192 * 4;
     size_t mem_size = throughput * AR2D_MEM_PER_BATCH;
     size_t readbufsize = 128;
-    clState->buffer1 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, mem_size, NULL, &status);
-    clState->CLbuffer0 = clCreateBuffer(clState->context, CL_MEM_READ_WRITE, readbufsize, NULL, &status);
-    clState->outputBuffer = clCreateBuffer(clState->context, CL_MEM_WRITE_ONLY, 100, NULL, &status);
+    cll.buffer1 = clCreateBuffer(cll.context, CL_MEM_READ_WRITE, mem_size, NULL, &status);
+    cll.CLbuffer0 = clCreateBuffer(cll.context, CL_MEM_READ_WRITE, readbufsize, NULL, &status);
+    cll.outputBuffer = clCreateBuffer(cll.context, CL_MEM_WRITE_ONLY, 100, NULL, &status);
     uint64_t *pnonces;
     pnonces = (uint64_t *)malloc(sizeof(uint64_t) * 1);
 
@@ -664,7 +650,7 @@ void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
     s_minerThreadID = minerID;
 
     // generate log prefix
-    snprintf(s_logPrefix, sizeof(s_logPrefix), "MN%02d", minerID);
+    snprintf(s_logPrefix, sizeof(s_logPrefix), "MINER_%02d", minerID);
     s_minerThreadsInfo[minerID].logPrefix.assign(s_logPrefix);
 
     // init thread TLS variables that need it
@@ -734,29 +720,24 @@ void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
             unsigned int num = 0;
 
             cl_ulong le_target;
-            //	le_target = std::stoull(prms.target.substr(0,16).c_str());
             void *some = mpz_export(nullptr, 0, 1, 8, 0, 0, prms.mpz_target);
             le_target = ((uint64_t *)some)[0];
-            //	printf("64bit target: %llx\n", le_target);
-            // le_target = 0x1000;// mpz_get_ui(prms.mpz_target);
-
-            //	flip80(clState->cldata, blk->work->data);
             for (int i = 0; i < 32; i++)
-                clState->cldata[i] = s_seed[i];
+                cll.cldata[i] = s_seed[i];
 
-            status = clEnqueueWriteBuffer(clState->commandQueue, clState->CLbuffer0, true, 0, 32, clState->cldata, 0, NULL, NULL);
+            status = clEnqueueWriteBuffer(cll.commandQueue, cll.CLbuffer0, true, 0, 32, cll.cldata, 0, NULL, NULL);
 
             if (status != CL_SUCCESS) {
                 printf("EnqueueWriteBuffer failed %d", status);
                 exit(1);
             }
             pnonces[0] = 0xffffffffffffffff;
-            clEnqueueWriteBuffer(clState->commandQueue, clState->outputBuffer, CL_TRUE, 0, sizeof(uint64_t), pnonces, 0, NULL, NULL);
-            // init - search
-            clSetKernelArg(clState->kernel[0], 0, sizeof(cl_mem), (void *)&clState->buffer1);
-            clSetKernelArg(clState->kernel[0], 1, sizeof(cl_mem), (void *)&clState->CLbuffer0);
+            clEnqueueWriteBuffer(cll.commandQueue, cll.outputBuffer, CL_TRUE, 0, sizeof(uint64_t), pnonces, 0, NULL, NULL);
 
-            clSetKernelArg(clState->kernel[0], 2, sizeof(uint64_t), &(s_nonce));
+            // init - search
+            clSetKernelArg(cll.kernel[0], 0, sizeof(cl_mem), (void *)&cll.buffer1);
+            clSetKernelArg(cll.kernel[0], 1, sizeof(cl_mem), (void *)&cll.CLbuffer0);
+            clSetKernelArg(cll.kernel[0], 2, sizeof(uint64_t), &(s_nonce));
 
             // fill - search 1
             size_t bufferSize = 32 * 8 * 1 * sizeof(cl_uint) * 2;
@@ -764,57 +745,57 @@ void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
             uint32_t lanes = 1;
             uint32_t segment_blocks = 2;
 
-            clSetKernelArg(clState->kernel[1], 0, bufferSize, NULL);
-            clSetKernelArg(clState->kernel[1], 1, sizeof(clState->buffer1), (void *)&clState->buffer1);
-            clSetKernelArg(clState->kernel[1], 2, sizeof(uint32_t), &passes);
-            clSetKernelArg(clState->kernel[1], 3, sizeof(uint32_t), &lanes);
-            clSetKernelArg(clState->kernel[1], 4, sizeof(uint32_t), &segment_blocks);
+            clSetKernelArg(cll.kernel[1], 0, bufferSize, NULL);
+            clSetKernelArg(cll.kernel[1], 1, sizeof(cll.buffer1), (void *)&cll.buffer1);
+            clSetKernelArg(cll.kernel[1], 2, sizeof(uint32_t), &passes);
+            clSetKernelArg(cll.kernel[1], 3, sizeof(uint32_t), &lanes);
+            clSetKernelArg(cll.kernel[1], 4, sizeof(uint32_t), &segment_blocks);
 
-            // // final - serach 2
+            // final - search 2
             size_t smem = 129 * sizeof(cl_ulong) * 8 + 18 * sizeof(cl_ulong) * 8;
-            clSetKernelArg(clState->kernel[2], 0, sizeof(clState->buffer1), (void *)&clState->buffer1);
-            clSetKernelArg(clState->kernel[2], 1, sizeof(clState->outputBuffer), (void *)&clState->outputBuffer);
-            clSetKernelArg(clState->kernel[2], 2, smem, NULL);
-            clSetKernelArg(clState->kernel[2], 3, sizeof(uint64_t), &(s_nonce));
-            clSetKernelArg(clState->kernel[2], 4, sizeof(cl_ulong), &le_target);
+            clSetKernelArg(cll.kernel[2], 0, sizeof(cll.buffer1), (void *)&cll.buffer1);
+            clSetKernelArg(cll.kernel[2], 1, sizeof(cll.outputBuffer), (void *)&cll.outputBuffer);
+            clSetKernelArg(cll.kernel[2], 2, smem, NULL);
+            clSetKernelArg(cll.kernel[2], 3, sizeof(uint64_t), &(s_nonce));
+            clSetKernelArg(cll.kernel[2], 4, sizeof(cl_ulong), &le_target);
 
             const size_t global[1] = {throughput};
             const size_t local[1] = {64};
 
-            status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel[0], 1, NULL, global, local, 0, NULL, NULL);
+            status = clEnqueueNDRangeKernel(cll.commandQueue, cll.kernel[0], 1, NULL, global, local, 0, NULL, NULL);
 
             if (status != CL_SUCCESS) {
                 printf("lEnqueueNDRangeKernel[0] (%d). Build log follows:\n", status);
-                get_program_build_log(clState->program, dev_id);
+                get_program_build_log(cll.program, dev_id);
                 fflush(stdout);
                 exit(1);
             }
-            clFinish(clState->commandQueue);
+            clFinish(cll.commandQueue);
             const size_t global2[1] = {throughput * 32};
             const size_t local2[1] = {32};
-            status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel[1], 1, NULL, global2, local2, 0, NULL, NULL);
+            status = clEnqueueNDRangeKernel(cll.commandQueue, cll.kernel[1], 1, NULL, global2, local2, 0, NULL, NULL);
 
             if (status != CL_SUCCESS) {
                 printf("lEnqueueNDRangeKernel[1] (%d). Build log follows:\n", status);
-                get_program_build_log(clState->program, dev_id);
+                get_program_build_log(cll.program, dev_id);
                 fflush(stdout);
                 exit(1);
             }
-            clFinish(clState->commandQueue);
+            clFinish(cll.commandQueue);
 
             const size_t global3[2] = {4, throughput};
             const size_t local3[2] = {4, 8};
-            status = clEnqueueNDRangeKernel(clState->commandQueue, clState->kernel[2], 2, NULL, global3, local3, 0, NULL, NULL);
+            status = clEnqueueNDRangeKernel(cll.commandQueue, cll.kernel[2], 2, NULL, global3, local3, 0, NULL, NULL);
 
             if (status != CL_SUCCESS) {
                 printf("lEnqueueNDRangeKernel[2] (%d). Build log follows:\n", status);
-                get_program_build_log(clState->program, dev_id);
+                get_program_build_log(cll.program, dev_id);
                 fflush(stdout);
                 exit(1);
             }
-            clFinish(clState->commandQueue);
+            clFinish(cll.commandQueue);
 
-            check_clEnqueueReadBuffer(clState->commandQueue, clState->outputBuffer,
+            check_clEnqueueReadBuffer(cll.commandQueue, cll.outputBuffer,
                                       CL_TRUE,               // cl_bool blocking_read
                                       0,                     // size_t offset
                                       sizeof(uint64_t) * 1,  // size_t size
@@ -823,30 +804,24 @@ void minerThreadFn(int minerID) {  // setup opencl bodger aramamaam
                                       NULL,                  // cl_event *event_wait_list
                                       NULL);
 
-            //	printf("coming out of the opengl %llx target: %llx \n", pnonces[0], le_target);
-
             if (pnonces[0] != 0xffffffffffffffff) {
-                // printf("winning nonce = %llx \n", pnonces[0]);
-                //	pnonces[0] = s_nonce;// &0xffffffff00000000ull;
-                s_nonce = pnonces[0];  // += 0x1fffff12;
-                                       //	printf("s_nonce = %llx \n", pnonces[0]);
-                bool hashOk = hash(prms, mpz_result, s_nonce, s_ctx);
+                s_nonce = pnonces[0];
+                hash(prms, mpz_result, s_nonce, s_ctx);
             }
             s_nonce += throughput;
             s_threadHashes += throughput;
             s_totalHashes += throughput;
-            // break;
         }
     }
     freeCurrentThreadMiningMemory();
 }
 
-void startMinerThreads(int nThreads) {
-    assert(nThreads > 0);
+void startMinerThreads(int gpuMiners) {
+    assert(gpuMiners > 0);
     assert(s_minerThreads.size() == 0);
-    s_minerThreads.resize(nThreads);
-    s_minerThreadsInfo.resize(nThreads);
-    for (int i = 0; i < nThreads; i++) {
+    s_minerThreads.resize(gpuMiners);
+    s_minerThreadsInfo.resize(gpuMiners);
+    for (int i = 0; i < gpuMiners; i++) {
         s_minerThreads[i] = new std::thread(minerThreadFn, i);
     }
 }
