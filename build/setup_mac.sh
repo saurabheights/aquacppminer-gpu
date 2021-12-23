@@ -16,10 +16,6 @@ rm -rf "prj"
 rm -rf "tools"
 
 cd $pwd
-LOG_SECTION "ARGON"
-bash build/scripts_linux/setup_argon.sh
-
-cd $pwd
 LOG_SECTION "PREMAKE"
 bash build/scripts_mac/setup_premake.sh
 

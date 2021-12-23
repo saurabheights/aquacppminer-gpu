@@ -1,3 +1,9 @@
 [submodule "rapidjson"]
 	path = rapidjson
 	url = https://github.com/miloyip/rapidjson.git
+[submodule "phc-winner-argon2"]
+	path = phc-winner-argon2
+	url = https://github.com/aquachain/argon2.git
+[submodule "blake2"]
+	path = blake2
+	url = https://github.com/aquachain/blake2.git

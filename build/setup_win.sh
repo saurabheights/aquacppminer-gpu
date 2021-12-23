@@ -20,10 +20,6 @@ LOG_SECTION "CURL"
 bash build/scripts_win/setup_curl.sh
 
 cd $pwd
-LOG_SECTION "ARGON"
-bash build/scripts_win/setup_argon.sh
-
-cd $pwd
 LOG_SECTION "MPIR"
 bash build/scripts_win/setup_mpir.sh
 
