@@ -31,7 +31,9 @@ find_package(OpenCL 1.2 REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIRS})
 
 # RapidJson
-find_package(RapidJSON CONFIG REQUIRED)
+# find_package(RapidJSON CONFIG REQUIRED)  # No need to install until we get vcpkg. header only library, can be added directly to cmake.
+# ToDo Remove this library checkoutand add vcpkg install rapidjson.
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/")
 
 set(CURL_LIBRARY "-lcurl") 
 find_package(CURL REQUIRED)
@@ -69,7 +71,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 17)
 #target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(${PROJECT_NAME} PRIVATE ${GMP_LIBRARIES} OpenSSL::SSL rapidjson ${CURL_LIBRARIES} Threads::Threads ${OpenCL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${GMP_LIBRARIES} OpenSSL::SSL ${CURL_LIBRARIES} Threads::Threads ${OpenCL_LIBRARIES})
 
 # For debugging
 # message(STATUS "\n All cmake variables below:-\n")
