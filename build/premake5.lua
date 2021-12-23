@@ -168,7 +168,7 @@ workspace "aquacppminer"
 
 		filter { "system:linux" }
  			linkoptions { 
-				"-lgmp -lpthread -lcrypto", 
+				"-lgmp -lpthread -lcrypto -lOpenCL", 
 				"`curl-config --libs`" 
 			}
 		filter { "system:macosx" }
