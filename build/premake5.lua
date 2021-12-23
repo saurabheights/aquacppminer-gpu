@@ -12,7 +12,6 @@ workspace "aquacppminer"
 	-- shared by all configs & platforms
 	floatingpoint "Fast"
 	rtti "Off"
-	exceptionhandling ("Off")
 	targetdir "bin/"
 	debugdir "bin/"
 
