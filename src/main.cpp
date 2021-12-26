@@ -43,7 +43,7 @@
 using std::chrono::high_resolution_clock;
 
 const char* COORDINATOR_LOG_PREFIX = "MAIN";
-const std::string VERSION = "1.3.1";
+const std::string VERSION = "1.4.0";
 
 bool s_needKeyPressAtEnd = false;
 bool s_run = true;

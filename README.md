@@ -1,77 +1,82 @@
-# GPU variety of [aquacppminer](https://github.com/aquachain/aquacppminer)
-
-# Aquacppminer
-[Aquachain](https://aquachain.github.io/) C++ optimized miner, originally created by cryptogone.
-
-Currently the best CPU miner for mining AQUA
+# Multi-GPU variety of [aquacppminer](https://github.com/aquachain/aquacppminer)
+# AquaGpuMiner
+[Aquachain](https://aquachain.github.io/) optimized gpu miner. Currently the best miner for mining AQUA.
 
 **[Tutorial](https://telegra.ph/Mining-AQUA-05-27)**
-
-### Binaries
-Download [latest binaries](https://aquacha.in/latest/?sort=time&amp;order=desc)
-
-    aquacppminer     : slowest version, should work on any CPU
-    aquacppminer_avx : faster version, for CPUs supporting AVX instruction set
-    aquacppminer_avx2: fastest version, for recent CPUs supporting AVX2 instruction set
-
-Use a tool like CPUZ to see if your CPU supports AVX / AVX2
-
-### Versions
+# Versions
 * 1.0: initial release
 * 1.1: fix occasional bad shares, linux/win/macOS build scripts
 * 1.2: less HTTP connections, --proxy option, developer options, reduced fee to 2%
 * 1.3.1: fee system removed
+* 1.4.0: Added multi-gpu support.
 
-### Installation
-On Linux you may need to install some required packages first in order to build
+# Setup
 
-    ubuntu : sudo apt-get install libssl-dev libcurl4-gnutls-dev libgmp-dev
-    redhat : sudo yum install libcurl-devel gmp-devel openssl-devel
+## Linux
 
-Other platforms, just unzip to a folder and launch
+### Install dependencies
+
+For linux(ubuntu), we have also provided a dockerfile for nvidia-gpu cards. See `./docker/README.md` for building with docker.
+
+To build with docker, first install dependencies to build miner:
+
+``` shell
+sudo apt-get install -y \
+    git build-essential pkg-config cmake curl \
+    libssl-dev libcurl4-gnutls-dev libgmp-dev \
+    ocl-icd-libopencl1 ocl-icd-opencl-dev clinfo
+```
 
 ### Build
-* all commands below need to be launched from the repo folder in a shell (github console on Windows, bash & friends on others)
-* on linux you first need to install some packages (see installation section)
-* on Windows you need to have Visual Studio 2015 installed [(community version is ok)](https://go.microsoft.com/fwlink/?LinkId=615448&clcid=0x409)
-* launch ./build/setup_linux.sh, ./build/setup_windows.sh or ./build/setup_linux.sh, depending on your platform
-* launch ./build/make_release_linux.sh, ./build/make_release_windows.sh, ./build/make_release_mac.sh, depending on your platform
-* if build succesfull, binaries will be in the rel/ folder
+
+Clone the repo to any directory.
+```shell
+git clone --recurse-submodules https://github.com/saurabheights/aquagpuminer.git
+mkdir aquagpuminer/build
+cd aquagpuminer/build
+cmake ..
+make -j4
+```
 
 ### Config file
 * First time you launch the miner it will ask for configuration and store it into config.cfg. 
-* You can edit this file later if you want, delete config.cfg and relaunch the miner to restart configuration
+* You can edit this file later if you want, delete config.cfg and relaunch the miner to reset configuration
 * If using commandline parameters (see next section) miner will not create config file.
 * Commandline parameters have priority over config file.
 
 ### Usage
-    aquacppminer -F url [-t nThreads] [-n nodeUrl] [--solo] [-r refreshRate] [-h]
-        -F url         : url of pool or node to mine on, if not specified, will pool mine to dev's aquabase
-        -t nThreads    : number of threads to use (if not specified will use maximum logical threads available)
-        -n node_url    : optional node url, to get more stats (pool mining only)
-        -r rate        : pool refresh rate, ex: 3s, 2.5m, default is 3s
-        --solo         : solo mining, -F needs to be the node url
-        --proxy        : proxy to use, ex: --proxy socks5://127.0.0.1:9150
-        --argon x,y,z  : use specific argon params (ex: 4,512,1), skip shares submit if incompatible with HF7
-        --submit       : when used with --argon, forces submitting shares to pool/node
-        -h             : display this help message and exit
 
+``` shell
+aquacppminer.exe -F url [-g gpu_id1,gpu_id2,...] [-n nodeUrl] [--solo] [-r refreshRate] [-h]
+  -F url         : url of pool or node to mine on, if not specified, will pool mine to dev's aquabase
+  -g id1,id2,... : Commo separate list of gpu ids to use, ex: -g 1,2. By default, uses all gpus available.
+  -n node_url    : optional node url, to get more stats (pool mining only)
+  -r rate        : pool refresh rate, ex: 3s, 2.5m, default is 3s
+  --solo         : solo mining, -F needs to be the node url
+  --proxy        : proxy to use, ex: --proxy socks5://127.0.0.1:9150  --argon x,y,z  : use specific argon params (ex: 4,512,1), skip shares submit if incompatible with HF7
+  --submit       : when used with --argon, forces submitting shares to pool/node
+  -h             : display this help message and exit
+```
 ### Examples
 
-Pool Mining, auto thread count
+Pool Mining - Use all available gpus
 
-    aquacppminer -F http://pool.aquachain-foundation.org:8888/0x6e37abb108f4010530beb4bbfd9842127d8bfb3f
+```
+aquagpuminer -F http://aqua.signal2noi.se:19998/0x05935dCE74Df570C9bC0212e0142DbC6D0E63999/1
+```
 
-Pool Mining, 8 threads, getting more block stats from local aqua node
+Pool Mining - Use all gpus and getting more block stats from local aqua node
 
-    aquacppminer -t 8 -F http://pool.aquachain-foundation.org:8888/0x6e37abb108f4010530beb4bbfd9842127d8bfb3f -n http://127.0.0.1:8543
+```
+aquagpuminer -F http://pool.aquachain-foundation.org:8888/0x6e37abb108f4010530beb4bbfd9842127d8bfb3f -n http://127.0.0.1:8543
+```
 
-Solo Mining to local aqua node, auto thread count
+Solo Mining to local aqua node, use all gpus:-
 
-    aquacppminer --solo -F http://127.0.0.1:8543
-
+```
+aquagpuminer --solo -F http://127.0.0.1:8543
+```
 ### Credits
-* Email: cryptogone.dev@gmail.com
-* Twitter: [@CryptoGonus](https://twitter.com/CryptoGonus)
-* Discord: cryptogone#3107
-* AQUA : 0x6e37abb108f4010530beb4bbfd9842127d8bfb3f
+* Twitter: [@aquacrypto](https://twitter.com/aquacrypto)
+* Discord: saurabheights#4094
+* AQUA : 0x299D94e66d17137e2B5b96527cA146FA6f0b4c24

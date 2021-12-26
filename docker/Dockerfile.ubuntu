@@ -17,7 +17,6 @@ ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
 # Clone and build AQUA.
 WORKDIR /aqua
-WORKDIR /aqua
 RUN git clone --recursive https://github.com/saurabheights/aquacppminer-gpu.git .
 WORKDIR /aqua/build
 RUN cmake ..

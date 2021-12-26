@@ -18,7 +18,7 @@ const std::string OPT_PROXY = "--proxy";
 const std::string OPT_ARGON_SUBMIT = "--submit";
 
 const std::string s_usageMsg =
-    "aquacppminer.exe -F url [-t nThreads] [-n nodeUrl] [--solo] [-r refreshRate] [-h]\n"
+    "aquacppminer.exe -F url [-g gpu_id1,gpu_id2,...] [-n nodeUrl] [--solo] [-r refreshRate] [-h]\n"
     "  -F url         : url of pool or node to mine on, if not specified, will pool mine to dev's aquabase\n"
     "  -g id1,id2,... : Commo separate list of gpu ids to use, ex: -g 1,2. By default, uses all gpus available.\n"
     "  -n node_url    : optional node url, to get more stats (pool mining only)\n"

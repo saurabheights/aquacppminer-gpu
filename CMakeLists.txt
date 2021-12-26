@@ -32,6 +32,7 @@ include_directories(${OpenCL_INCLUDE_DIRS})
 
 # RapidJson
 # find_package(RapidJSON CONFIG REQUIRED)  # No need to install until we get vcpkg. header only library, can be added directly to cmake.
+# include_directories(${RAPIDJSON_INCLUDE_DIRS})
 # ToDo Remove this library checkoutand add vcpkg install rapidjson.
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/")
 
@@ -80,4 +81,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${GMP_LIBRARIES} OpenSSL::SSL ${CU
 # foreach(_variableName ${_variableNames})
 #     message(STATUS "${_variableName}=${${_variableName}}")
 # endforeach()
-# include_directories(${RAPIDJSON_INCLUDE_DIRS})
