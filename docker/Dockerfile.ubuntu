@@ -10,10 +10,8 @@ RUN apt-get update && apt-get install -y \
     vim
 
 # OpenCL needs to know which vendors lib to utilize
-ENV NVIDIA_VISIBLE_DEVICES all
 RUN mkdir -p /etc/OpenCL/vendors && \
     echo "/usr/local/cuda-11.4/targets/x86_64-linux/lib/libOpenCL.so.1.0" > /etc/OpenCL/vendors/nvidia.icd 
-ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 
 # Clone and build AQUA.
 WORKDIR /aqua
