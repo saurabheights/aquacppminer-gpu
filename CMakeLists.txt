@@ -1,8 +1,13 @@
 ﻿# See https://github.com/TheLartians/ModernCppStarter/blob/master/CMakeLists.txt
 cmake_minimum_required (VERSION 3.14)
+
+# Setup vcpkg toolchain first. https://github.com/microsoft/vcpkg#vcpkg-as-a-submodule
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake
+    CACHE STRING "Vcpkg toolchain file")
+set(CMAKE_CXX_STANDARD 17)
+
 project ("aquagpuminer" VERSION 1.0 LANGUAGES CXX C)
 
-set(CMAKE_CXX_STANDARD 17)
 
 add_definitions(-DARCH="Linux")
 

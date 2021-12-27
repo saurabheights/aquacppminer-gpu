@@ -38,6 +38,25 @@ cmake ..
 make -j4
 ```
 
+## Windows
+
+### Dependencies
+
+On Windows, all dependencies are installed using [vcpkg](https://vcpkg.io/en/getting-started.html), which gets auto-downloaded to aquagpuminer during git clone.
+
+For 64-bit systems, open powershell and run following commands:-
+
+```shell
+git clone --recurse-submodules https://github.com/saurabheights/aquagpuminer.git
+.\vcpkg\bootstrap-vcpkg.bat
+vcpkg\vcpkg.exe install --feature-flags=manifests,binarycaching --triplet=x64-windows
+cmake -DCMAKE_BUILD_TYPE=Release -B build -S . -T host=x64 -A x64
+cmake --build .\build\ --config Release
+cp .\src\input.cl .\build\Release\
+cd .\build\Release\
+.\aquagpuminer.exe
+```
+
 ### Config file
 * First time you launch the miner it will ask for configuration and store it into config.cfg. 
 * You can edit this file later if you want, delete config.cfg and relaunch the miner to reset configuration
