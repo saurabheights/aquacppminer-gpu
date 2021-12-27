@@ -32,6 +32,10 @@ using namespace rapidjson;
 using std::string;
 using std::chrono::high_resolution_clock;
 
+#ifdef _WIN32
+#include <io.h>
+#endif
+
 #define DEBUG_NONCES (0)
 
 #ifdef _WIN32
@@ -480,13 +484,13 @@ void get_program_build_log(cl_program program, cl_device_id device) {
 void load_file(const char *fname, char **dat, size_t *dat_len, int ignore_error) {
     struct stat st;
     int fd;
-    ssize_t ret;
-    if (-1 == (fd = open(fname, O_RDONLY | O_BINARY))) {
+    SSIZE_T ret;
+    if (-1 == (fd = _open(fname, O_RDONLY | O_BINARY))) {
         if (ignore_error)
             return;
         printf("%s: %s\n", fname, strerror(errno));
     }
-    if (stat(fd, &st))
+    if (stat(fname, &st))
         printf("stat: %s: %s\n", fname, strerror(errno));
     *dat_len = st.st_size;
     if (!(*dat = (char *)malloc(*dat_len + 1)))
@@ -602,7 +606,7 @@ void minerThreadFn(int minerID) {
         printf("clCreateCommandQueue (%d)\n", status);
 
 #if _WIN32
-    const *char source = null;
+    char *source = nullptr;
     load_file("input.cl", &source, &source_len, 0);
 #else
     const char *source;

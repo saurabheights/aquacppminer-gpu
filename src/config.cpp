@@ -78,7 +78,7 @@ bool loadConfigFile(std::string& log) {
     newCfg.getWorkUrl = params[GET_WORK_URL];
     newCfg.fullNodeUrl = params[FULLNODE_URL];
 
-        // Convert string to int.
+    // Convert string to int.
     std::string input(params[GPUIDS]);
     std::vector<int> gpusToUseIndices;
     try {

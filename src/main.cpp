@@ -65,6 +65,7 @@ void initConfigurationFile() {
 
 int main(int argc, char** argv) {
     // Check if any GPU is available.
+    std::cout << "Checking gpu devices." << std::endl;
     int numOfGpus = checkGpuDevices();
     if (numOfGpus == 0) {
         std::cerr << "No devices detected. Miner will exit." << std::endl;

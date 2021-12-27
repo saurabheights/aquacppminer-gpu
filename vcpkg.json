@@ -1,0 +1,13 @@
+{
+  "name": "aquagpuminer",
+  "version": "1.4.0",
+  "description": "Multi-GPU miner for AQUA",
+  "homepage": "https://aquachain.github.io/",
+  "dependencies": [
+    "openssl",
+    "gmp",
+    "pthreads",
+    "opencl",
+    "curl"
+  ]
+}

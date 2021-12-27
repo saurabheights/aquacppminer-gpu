@@ -4,6 +4,7 @@
 #include <tchar.h>
 #include <windows.h>
 
+#include <string>
 #include <thread>
 
 // from: https://msdn.microsoft.com/en-us/library/ms683194

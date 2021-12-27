@@ -17,3 +17,5 @@ golang/*.exe
 docs/
 BLAKE2/
 /premake5.lua
+vcpkg_installed
+out
