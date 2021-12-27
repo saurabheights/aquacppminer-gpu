@@ -7,3 +7,6 @@
 [submodule "blake2"]
 	path = blake2
 	url = https://github.com/aquachain/blake2.git
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/Microsoft/vcpkg.git
